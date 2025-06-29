@@ -1,0 +1,29 @@
+﻿C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Microsoft\VC\v170\Microsoft.CppBuild.targets(517,5): warning MSB8004: Output 디렉터리가 슬래시로 끝나지 않습니다. Output 디렉터리의 적절한 평가를 허용하는 데 필요하므로 이 빌드 인스턴스에서 슬래시를 추가합니다.
+  Arbiter.cpp
+C:\Users\hurch\Desktop\24-2-GameEngine\MathUtils.h(62,16): warning C4244: '초기화 중': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 'Arbiter.cpp'을(를) 컴파일하는 중)
+  
+  Body.cpp
+C:\Users\hurch\Desktop\24-2-GameEngine\MathUtils.h(62,16): warning C4244: '초기화 중': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 'Body.cpp'을(를) 컴파일하는 중)
+  
+  Collide.cpp
+C:\Users\hurch\Desktop\24-2-GameEngine\MathUtils.h(62,16): warning C4244: '초기화 중': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 'Collide.cpp'을(를) 컴파일하는 중)
+  
+C:\Users\hurch\Desktop\24-2-GameEngine\Collide.cpp(185,14): warning C4244: '초기화 중': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\hurch\Desktop\24-2-GameEngine\Collide.cpp(559,15): warning C4244: '초기화 중': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\hurch\Desktop\24-2-GameEngine\Collide.cpp(586,14): warning C4244: '초기화 중': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  Joint.cpp
+C:\Users\hurch\Desktop\24-2-GameEngine\MathUtils.h(62,16): warning C4244: '초기화 중': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 'Joint.cpp'을(를) 컴파일하는 중)
+  
+  main.cpp
+C:\Users\hurch\Desktop\24-2-GameEngine\main.cpp(1,1): warning C4819: 현재 코드 페이지(949)에서 표시할 수 없는 문자가 파일에 들어 있습니다. 데이터가 손실되지 않게 하려면 해당 파일을 유니코드 형식으로 저장하십시오.
+  World.cpp
+C:\Users\hurch\Desktop\24-2-GameEngine\World.cpp(1,1): warning C4819: 현재 코드 페이지(949)에서 표시할 수 없는 문자가 파일에 들어 있습니다. 데이터가 손실되지 않게 하려면 해당 파일을 유니코드 형식으로 저장하십시오.
+C:\Users\hurch\Desktop\24-2-GameEngine\MathUtils.h(62,16): warning C4244: '초기화 중': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  (소스 파일 'World.cpp'을(를) 컴파일하는 중)
+  
+  코드를 생성하고 있습니다...
+  Box2D.vcxproj -> C:\Users\hurch\Desktop\24-2-GameEngine\Game\BalanceChellange.exe

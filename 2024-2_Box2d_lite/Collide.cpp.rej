@@ -1,0 +1,450 @@
+diff a/Collide.cpp b/Collide.cpp	(rejected hunks)
+@@ -153,248 +153,248 @@
+ 	c[1].v = pos + Rot * c[1].v;
+ }
+ 
+-// The normal points from A to B
+-int Collide(Contact* contacts, Body* bodyA, Body* bodyB)
+-{
+-	
+-	if (bodyA->shape == 1 && bodyB->shape == 1)
+-	{
+-		Vec2 posA = bodyA->position;
+-		Vec2 posB = bodyB->position;
+-		float radiusA = bodyA->radius;
+-		float radiusB = bodyB->radius;
+-
+-		Vec2 d = posB - posA;
+-		float distSquared = Dot(d, d);
+-		float radiusSum = radiusA + radiusB;
+ 
++int BoxToBox(Contact* contacts, const Body* bodyA, const Body* bodyB)
++{
+ 
+-		if (distSquared <= radiusSum * radiusSum)
+-		{
+-			float dist = sqrt(distSquared);
+-			Vec2 normal = dist > 0.0f ? d / dist : Vec2(1.0f, 0.0f); 
++	// Setup
++	Vec2 hA = 0.5f * bodyA->width;
++	Vec2 hB = 0.5f * bodyB->width;
+ 
+-			normal *= radiusA;
++	Vec2 posA = bodyA->position;
++	Vec2 posB = bodyB->position;
+ 
+-			contacts[0].position = posA + normal;
+-			contacts[0].normal = normal;
+-			contacts[0].separation = dist - radiusSum;
+-			return 1;
+-		}
+-		return 0; 
+-	}
++	Mat22 RotA(bodyA->rotation), RotB(bodyB->rotation);
+ 
+-	
+-	else if ((bodyA->shape == 1 && bodyB->shape == 0) || (bodyA->shape == 0 && bodyB->shape == 1))
+-	{
+-	
+-		if (bodyB->shape == 1)
+-			std::swap(bodyA, bodyB);
++	Mat22 RotAT = RotA.Transpose();
++	Mat22 RotBT = RotB.Transpose();
+ 
+-		Vec2 circlePos = bodyA->position;
+-		float radius = bodyA->radius;
++	Vec2 dp = posB - posA;
++	Vec2 dA = RotAT * dp;
++	Vec2 dB = RotBT * dp;
+ 
+-		Vec2 boxPos = bodyB->position;
+-		Vec2 h = 0.5f * bodyB->width;
+-		Mat22 Rot(bodyB->rotation);
+-		Mat22 RotT = Rot.Transpose();
++	Mat22 C = RotAT * RotB;
++	Mat22 absC = Abs(C);
++	Mat22 absCT = absC.Transpose();
+ 
+-		Vec2 localCirclePos = RotT * (circlePos - boxPos);
++	// Box A faces
++	Vec2 faceA = Abs(dA) - hA - absC * hB;
++	if (faceA.x > 0.0f || faceA.y > 0.0f)
++		return 0;
+ 
+-		Vec2 closestPoint = localCirclePos;
+-		closestPoint.x = std::max(-h.x, std::min(closestPoint.x, h.x));
+-		closestPoint.y = std::max(-h.y, std::min(closestPoint.y, h.y));
++	// Box B faces
++	Vec2 faceB = Abs(dB) - absCT * hA - hB;
++	if (faceB.x > 0.0f || faceB.y > 0.0f)
++		return 0;
+ 
+-		Vec2 d = localCirclePos - closestPoint;
+-		float distSquared = Dot(d, d);
++	// Find best axis
++	Axis axis;
++	float separation;
++	Vec2 normal;
+ 
++	// Box A faces
++	axis = FACE_A_X;
++	separation = faceA.x;
++	normal = dA.x > 0.0f ? RotA.col1 : -RotA.col1;
+ 
+-		if (distSquared <= radius * radius)
+-		{
+-			float dist = sqrt(distSquared);
++	const float relativeTol = 0.95f;
++	const float absoluteTol = 0.01f;
+ 
+-			Vec2 normal = dist > 0.0f ? (Rot * d) / dist : Vec2(1.0f, 0.0f);
+-			normal *= radius;
++	if (faceA.y > relativeTol * separation + absoluteTol * hA.y)
++	{
++		axis = FACE_A_Y;
++		separation = faceA.y;
++		normal = dA.y > 0.0f ? RotA.col2 : -RotA.col2;
++	}
+ 
+-			contacts[0].position = circlePos - normal;
+-			contacts[0].normal = normal;
+-			contacts[0].separation = dist - radius;
+-			return 1;
+-		}
+-		return 0; 
++	// Box B faces
++	if (faceB.x > relativeTol * separation + absoluteTol * hB.x)
++	{
++		axis = FACE_B_X;
++		separation = faceB.x;
++		normal = dB.x > 0.0f ? RotB.col1 : -RotB.col1;
+ 	}
+-	else if (bodyA->shape == 0 && bodyB->shape == 0)
++
++	if (faceB.y > relativeTol * separation + absoluteTol * hB.y)
+ 	{
+-		// Setup
+-		Vec2 hA = 0.5f * bodyA->width;
+-		Vec2 hB = 0.5f * bodyB->width;
++		axis = FACE_B_Y;
++		separation = faceB.y;
++		normal = dB.y > 0.0f ? RotB.col2 : -RotB.col2;
++	}
+ 
+-		Vec2 posA = bodyA->position;
+-		Vec2 posB = bodyB->position;
++	// Setup clipping plane data based on the separating axis
++	Vec2 frontNormal, sideNormal;
++	ClipVertex incidentEdge[2];
++	float front, negSide, posSide;
++	char negEdge, posEdge;
+ 
+-		Mat22 RotA(bodyA->rotation), RotB(bodyB->rotation);
++	// Compute the clipping lines and the line segment to be clipped.
++	switch (axis)
++	{
++	case FACE_A_X:
++	{
++		frontNormal = normal;
++		front = Dot(posA, frontNormal) + hA.x;
++		sideNormal = RotA.col2;
++		float side = Dot(posA, sideNormal);
++		negSide = -side + hA.y;
++		posSide = side + hA.y;
++		negEdge = EDGE3;
++		posEdge = EDGE1;
++		ComputeIncidentEdge(incidentEdge, hB, posB, RotB, frontNormal);
++	}
++	break;
+ 
+-		Mat22 RotAT = RotA.Transpose();
+-		Mat22 RotBT = RotB.Transpose();
++	case FACE_A_Y:
++	{
++		frontNormal = normal;
++		front = Dot(posA, frontNormal) + hA.y;
++		sideNormal = RotA.col1;
++		float side = Dot(posA, sideNormal);
++		negSide = -side + hA.x;
++		posSide = side + hA.x;
++		negEdge = EDGE2;
++		posEdge = EDGE4;
++		ComputeIncidentEdge(incidentEdge, hB, posB, RotB, frontNormal);
++	}
++	break;
+ 
+-		Vec2 dp = posB - posA;
+-		Vec2 dA = RotAT * dp;
+-		Vec2 dB = RotBT * dp;
++	case FACE_B_X:
++	{
++		frontNormal = -normal;
++		front = Dot(posB, frontNormal) + hB.x;
++		sideNormal = RotB.col2;
++		float side = Dot(posB, sideNormal);
++		negSide = -side + hB.y;
++		posSide = side + hB.y;
++		negEdge = EDGE3;
++		posEdge = EDGE1;
++		ComputeIncidentEdge(incidentEdge, hA, posA, RotA, frontNormal);
++	}
++	break;
+ 
+-		Mat22 C = RotAT * RotB;
+-		Mat22 absC = Abs(C);
+-		Mat22 absCT = absC.Transpose();
++	case FACE_B_Y:
++	{
++		frontNormal = -normal;
++		front = Dot(posB, frontNormal) + hB.y;
++		sideNormal = RotB.col1;
++		float side = Dot(posB, sideNormal);
++		negSide = -side + hB.x;
++		posSide = side + hB.x;
++		negEdge = EDGE2;
++		posEdge = EDGE4;
++		ComputeIncidentEdge(incidentEdge, hA, posA, RotA, frontNormal);
++	}
++	break;
++	}
+ 
+-		// Box A faces
+-		Vec2 faceA = Abs(dA) - hA - absC * hB;
+-		if (faceA.x > 0.0f || faceA.y > 0.0f)
+-			return 0;
++	// clip other face with 5 box planes (1 face plane, 4 edge planes)
+ 
+-		// Box B faces
+-		Vec2 faceB = Abs(dB) - absCT * hA - hB;
+-		if (faceB.x > 0.0f || faceB.y > 0.0f)
+-			return 0;
++	ClipVertex clipPoints1[2];
++	ClipVertex clipPoints2[2];
++	int np;
+ 
+-		// Find best axis
+-		Axis axis;
+-		float separation;
+-		Vec2 normal;
++	// Clip to box side 1
++	np = ClipSegmentToLine(clipPoints1, incidentEdge, -sideNormal, negSide, negEdge);
+ 
+-		// Box A faces
+-		axis = FACE_A_X;
+-		separation = faceA.x;
+-		normal = dA.x > 0.0f ? RotA.col1 : -RotA.col1;
++	if (np < 2)
++		return 0;
+ 
+-		const float relativeTol = 0.95f;
+-		const float absoluteTol = 0.01f;
++	// Clip to negative box side 1
++	np = ClipSegmentToLine(clipPoints2, clipPoints1, sideNormal, posSide, posEdge);
+ 
+-		if (faceA.y > relativeTol * separation + absoluteTol * hA.y)
+-		{
+-			axis = FACE_A_Y;
+-			separation = faceA.y;
+-			normal = dA.y > 0.0f ? RotA.col2 : -RotA.col2;
+-		}
++	if (np < 2)
++		return 0;
+ 
+-		// Box B faces
+-		if (faceB.x > relativeTol * separation + absoluteTol * hB.x)
+-		{
+-			axis = FACE_B_X;
+-			separation = faceB.x;
+-			normal = dB.x > 0.0f ? RotB.col1 : -RotB.col1;
+-		}
++	// Now clipPoints2 contains the clipping points.
++	// Due to roundoff, it is possible that clipping removes all points.
++
++	int numContacts = 0;
++	for (int i = 0; i < 2; ++i)
++	{
++		float separation = Dot(frontNormal, clipPoints2[i].v) - front;
+ 
+-		if (faceB.y > relativeTol * separation + absoluteTol * hB.y)
++		if (separation <= 0)
+ 		{
+-			axis = FACE_B_Y;
+-			separation = faceB.y;
+-			normal = dB.y > 0.0f ? RotB.col2 : -RotB.col2;
++			contacts[numContacts].separation = separation;
++			contacts[numContacts].normal = normal;
++			// slide contact point onto reference face (easy to cull)
++			contacts[numContacts].position = clipPoints2[i].v - separation * frontNormal;
++			contacts[numContacts].feature = clipPoints2[i].fp;
++			if (axis == FACE_B_X || axis == FACE_B_Y)
++				Flip(contacts[numContacts].feature);
++			++numContacts;
+ 		}
++	}
+ 
+-		// Setup clipping plane data based on the separating axis
+-		Vec2 frontNormal, sideNormal;
+-		ClipVertex incidentEdge[2];
+-		float front, negSide, posSide;
+-		char negEdge, posEdge;
++	return numContacts;
+ 
+-		// Compute the clipping lines and the line segment to be clipped.
+-		switch (axis)
+-		{
+-		case FACE_A_X:
+-		{
+-			frontNormal = normal;
+-			front = Dot(posA, frontNormal) + hA.x;
+-			sideNormal = RotA.col2;
+-			float side = Dot(posA, sideNormal);
+-			negSide = -side + hA.y;
+-			posSide = side + hA.y;
+-			negEdge = EDGE3;
+-			posEdge = EDGE1;
+-			ComputeIncidentEdge(incidentEdge, hB, posB, RotB, frontNormal);
+-		}
+-		break;
++}
+ 
+-		case FACE_A_Y:
+-		{
+-			frontNormal = normal;
+-			front = Dot(posA, frontNormal) + hA.y;
+-			sideNormal = RotA.col1;
+-			float side = Dot(posA, sideNormal);
+-			negSide = -side + hA.x;
+-			posSide = side + hA.x;
+-			negEdge = EDGE2;
+-			posEdge = EDGE4;
+-			ComputeIncidentEdge(incidentEdge, hB, posB, RotB, frontNormal);
+-		}
+-		break;
++int CircleToCircle(Contact* contacts, const Body* bodyA, const Body* bodyB) {
++	Vec2 d = bodyB->position - bodyA->position;
++	float distSquared = Dot(d, d);
++	float radiusSum = bodyA->radius + bodyB->radius;
+ 
+-		case FACE_B_X:
+-		{
+-			frontNormal = -normal;
+-			front = Dot(posB, frontNormal) + hB.x;
+-			sideNormal = RotB.col2;
+-			float side = Dot(posB, sideNormal);
+-			negSide = -side + hB.y;
+-			posSide = side + hB.y;
+-			negEdge = EDGE3;
+-			posEdge = EDGE1;
+-			ComputeIncidentEdge(incidentEdge, hA, posA, RotA, frontNormal);
+-		}
+-		break;
++	if (distSquared <= radiusSum * radiusSum) {
++		float dist = sqrt(distSquared);
++		Vec2 normal = dist > 0.0f ? d / dist : Vec2(1.0f, 0.0f);
+ 
+-		case FACE_B_Y:
+-		{
+-			frontNormal = -normal;
+-			front = Dot(posB, frontNormal) + hB.y;
+-			sideNormal = RotB.col1;
+-			float side = Dot(posB, sideNormal);
+-			negSide = -side + hB.x;
+-			posSide = side + hB.x;
+-			negEdge = EDGE2;
+-			posEdge = EDGE4;
+-			ComputeIncidentEdge(incidentEdge, hA, posA, RotA, frontNormal);
+-		}
+-		break;
+-		}
++		contacts[0].position = bodyA->position + normal * bodyA->radius;
++		contacts[0].normal = normal;
++		contacts[0].separation = dist - radiusSum;
++		return 1;
++	}
++	return 0;
++}
++int CircleToBox(Contact* contacts, const Body* circle, const Body* box) {
++	Vec2 circlePos = circle->position;
++	Vec2 boxPos = box->position;
++	Vec2 h = 0.5f * box->width;
+ 
+-		// clip other face with 5 box planes (1 face plane, 4 edge planes)
++	Mat22 Rot(box->rotation);
++	Mat22 RotT = Rot.Transpose();
+ 
+-		ClipVertex clipPoints1[2];
+-		ClipVertex clipPoints2[2];
+-		int np;
++	Vec2 localCirclePos = RotT * (circlePos - boxPos);
+ 
+-		// Clip to box side 1
+-		np = ClipSegmentToLine(clipPoints1, incidentEdge, -sideNormal, negSide, negEdge);
++	Vec2 closestPoint = localCirclePos;
++	closestPoint.x = std::max(-h.x, std::min(closestPoint.x, h.x));
++	closestPoint.y = std::max(-h.y, std::min(closestPoint.y, h.y));
+ 
+-		if (np < 2)
+-			return 0;
++	Vec2 d = localCirclePos - closestPoint;
++	float distSquared = Dot(d, d);
+ 
+-		// Clip to negative box side 1
+-		np = ClipSegmentToLine(clipPoints2, clipPoints1, sideNormal, posSide, posEdge);
++	if (distSquared <= circle->radius * circle->radius) {
++		float dist = sqrt(distSquared);
++		Vec2 normal = dist > 0.0f ? (Rot * d) / dist : Vec2(1.0f, 0.0f);
+ 
+-		if (np < 2)
+-			return 0;
++		contacts[0].position = circlePos - normal * circle->radius;
++		contacts[0].normal = normal;
++		contacts[0].separation = dist - circle->radius;
++		return 1;
++	}
++	return 0;
++}
+ 
+-		// Now clipPoints2 contains the clipping points.
+-		// Due to roundoff, it is possible that clipping removes all points.
++typedef int (*CollisionHandler)(Contact* contacts, const Body* bodyA, const Body* bodyB);
+ 
+-		int numContacts = 0;
+-		for (int i = 0; i < 2; ++i)
+-		{
+-			float separation = Dot(frontNormal, clipPoints2[i].v) - front;
+-
+-			if (separation <= 0)
+-			{
+-				contacts[numContacts].separation = separation;
+-				contacts[numContacts].normal = normal;
+-				// slide contact point onto reference face (easy to cull)
+-				contacts[numContacts].position = clipPoints2[i].v - separation * frontNormal;
+-				contacts[numContacts].feature = clipPoints2[i].fp;
+-				if (axis == FACE_B_X || axis == FACE_B_Y)
+-					Flip(contacts[numContacts].feature);
+-				++numContacts;
+-			}
+-		}
++CollisionHandler collisionTable[2][2] =
++{
++	{ CircleToCircle, CircleToBox }, 
++	{ CircleToBox, BoxToBox }    
++};
+ 
+-		return numContacts;
++// The normal points from A to B
++int Collide(Contact* contacts, Body* bodyA, Body* bodyB)
++{
++	if (bodyA->shape > bodyB->shape) {
++		std::swap(bodyA, bodyB); // ���� ������� üũ
+ 	}
+-}
+\ No newline at end of file
++	CollisionHandler handler = collisionTable[bodyA->shape][bodyB->shape];
++	if (handler) {
++		return handler(contacts, bodyA, bodyB);
++	}
++	return 0;
++	
++}
++
