@@ -15,7 +15,7 @@
     <ProjectGuid>{2977EAE5-53D5-461D-A291-54F2F1E0A767}</ProjectGuid>
     <RootNamespace>Box2D</RootNamespace>
     <Keyword>Win32Proj</Keyword>
-    <ProjectName>BalanceChellange</ProjectName>
+    <ProjectName>BalanceChallenge</ProjectName>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -84,7 +84,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <OutputFile>$(OutDir)BalanceChellange.exe</OutputFile>
+      <OutputFile>$(OutDir)BalanceChallenge.exe</OutputFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
